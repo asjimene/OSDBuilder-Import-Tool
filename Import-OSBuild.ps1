@@ -1,3 +1,9 @@
+param (
+    # Import the OSBuild into perating System Upgrade Packages as well
+    [switch]
+    $ImportOSUpgrade = $false
+)
+
 <#	
 	.NOTES
 	===========================================================================
@@ -16,6 +22,7 @@ $Global:OSBuildPath = "C:\OSBuilder"
 
 # SCCM Variables
 $Global:ContentShare = "\\Path\to\Content\share"
+$Global:OSUpgradeContentShare = "\\Path\to\OSUpgrades\share"
 $Global:SCCMSite = "SITE:"
 $Global:PreferredDistributionLoc = "PreferredGroupName" #Must be a distribution point group at this time
 
@@ -72,13 +79,12 @@ Add-LogContent "Selected the Following Builds to import: $($SelectedBuilds.Name 
 ForEach ($Build in $SelectedBuilds){
     $wimLocation = Join-Path -Path $Build.FullName -ChildPath "OS\sources\install.wim"
     $destinationPath = "$Global:ContentShare\$($Build.Name).wim"
+    $osUpgradePath = "$Global:OSUpgradeContentShare\$($Build.Name)"
+
     if ((Test-Path $wimLocation) -and (-not (Test-Path $destinationPath))){
-        #Add-LogContent "$wimLocation exists"
-        #Add-LogContent "$destinationPath does not yet exist"
         Add-LogContent "Pre-Check Complete - Import can continue"
 
         #Get the Version Info from the OSBuild Folder
-        #$BuildInfo = Get-Content -Raw -Path "$($Build.FullName)\info\json\CurrentVersion.json" | ConvertFrom-Json
         $BuildInfo = Import-Clixml -Path "$($Build.FullName)\info\xml\CurrentVersion.xml"
         $BuildVersion = $BuildInfo.CurrentBuildNumber + "." + $BuildInfo.UBR
         $BuildDescription = $BuildInfo.ProductName + " Version $BuildVersion - Imported from OSBuilder on: $(Get-Date -Format G)"
@@ -139,6 +145,74 @@ ForEach ($Build in $SelectedBuilds){
         }
         if (Test-Path $destinationPath){
             Add-LogContent "ERROR: $destinationPath already exists! Skipping import for $($Build.Name)"
+        }
+    }
+
+    # Import OSUpgradePackage
+    if ($ImportOSUpgrade) {
+        if ((Test-Path $wimLocation) -and (-not (Test-Path $osUpgradePath))){
+            Add-LogContent "Pre-Check Complete - Import can continue"
+
+            #Get the Version Number from the OSBuild Folder
+            $BuildInfo = Import-Clixml -Path "$($Build.FullName)\info\xml\CurrentVersion.xml"
+            $BuildVersion = $BuildInfo.CurrentBuildNumber + "." + $BuildInfo.UBR
+            $BuildDescription = $BuildInfo.ProductName + " Version $BuildVersion - Imported from OSBuilder on: $(Get-Date -Format G)"
+
+            # Copy the selected install.wim to the ContentShare using the build name
+            Add-LogContent "Attempting to Copy OS Upgrade Files from $($Build.FullName)\OS to $osUpgradePath"
+            try {
+                Copy-Item -Path "$($Build.FullName)\OS" -Destination "$osUpgradePath" -Recurse -Force
+                Add-LogContent "Copy Completed Successfully"
+                $continueImport = $true
+            }
+            catch {
+                $ErrorMessage = $_.Exception.Message
+                Add-LogContent "ERROR: Copying $($Build.FullName) to $osUpgradePath failed! Skipping import for $($Build.Name)"
+                Add-LogContent "ERROR: $ErrorMessage"
+                $continueImport = $false
+            }
+
+            # Import the Copied wim into SCCM
+            if ($continueImport){
+                Push-Location
+                Set-Location $Global:SCCMSite
+                try {
+                    New-CMOperatingSystemInstaller -Name "$($Build.Name)" -Path "$osUpgradePath" -Version "$BuildVersion" -Description "$BuildDescription"
+                    Add-LogContent "Successfully Imported the Operating System as $($Build.Name)"
+                    $continueDistribution = $true
+                }
+                catch {
+                    $ErrorMessage = $_.Exception.Message
+                    Add-LogContent "ERROR: Importing OSUpgrade into SCCM from $osUpgradePath failed! Skipping import for $($Build.Name)"
+                    Add-LogContent "ERROR: $ErrorMessage"
+                    $continueDistribution = $false
+                }
+                Pop-Location
+            }
+
+            # Distribute the new OSUpgrade to the Specified Distribution Point Group
+            if ($continueDistribution){
+                Push-Location
+                Set-Location $Global:SCCMSite
+                try {
+                    Start-CMContentDistribution -OperatingSystemInstallerName "$($Build.Name)" -DistributionPointGroupName $Global:PreferredDistributionLoc
+                    Add-LogContent "Successfully Completed Copy, Import, and Distribution of OSUpgrade: $($Build.Name)"
+                }
+                catch {
+                    $ErrorMessage = $_.Exception.Message
+                    Add-LogContent "ERROR: Distributing OS Upgrade $($Build.Name) Failed!"
+                    Add-LogContent "ERROR: $ErrorMessage"
+                }
+                Pop-Location
+            }
+        }
+        else {
+            if (-not (Test-Path $wimLocation)){
+                Add-LogContent "ERROR: install.wim not found at $wimLocation - Skipping import for $($Build.Name)"
+            }
+            if (Test-Path $destinationPath){
+                Add-LogContent "ERROR: $osUpgradePath already exists! Skipping import for $($Build.Name)"
+            }
         }
     }
 }
