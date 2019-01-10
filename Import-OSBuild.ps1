@@ -78,7 +78,8 @@ ForEach ($Build in $SelectedBuilds){
         Add-LogContent "Pre-Check Complete - Import can continue"
 
         #Get the Version Info from the OSBuild Folder
-        $BuildInfo = Get-Content -Raw -Path "$($Build.FullName)\info\json\CurrentVersion.json" | ConvertFrom-Json
+        #$BuildInfo = Get-Content -Raw -Path "$($Build.FullName)\info\json\CurrentVersion.json" | ConvertFrom-Json
+        $BuildInfo = Import-Clixml -Path "$($Build.FullName)\info\xml\CurrentVersion.xml"
         $BuildVersion = $BuildInfo.CurrentBuildNumber + "." + $BuildInfo.UBR
         $BuildDescription = $BuildInfo.ProductName + " Version $BuildVersion - Imported from OSBuilder on: $(Get-Date -Format G)"
 
