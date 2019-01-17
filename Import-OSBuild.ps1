@@ -55,6 +55,8 @@ $Global:PreferredDistributionLoc = "PreferredGroupName" #Must be a distribution 
 $Global:LogPath = "$PSScriptRoot\OSBuilder-Import.log"
 $Global:MaxLogSize = 1000kb
 
+# Other Variables
+$Global:rCpyThreads = 4 # Number of threads for Robocopy to use during OSUpgrade Copy
 
 ## Functions
 
@@ -100,15 +102,21 @@ function copy-OSBuilderObject {
         }
     } 
     Else {
-            # Copy the selected install.wim to the ContentShare using the build name
-            Add-LogContent "Attempting to Copy OS Upgrade Files from $($Build.FullName)\OS to $osUpgradePath"
+            # Copy the selected Upgrade Package to the ContentShare using the build name
+            Add-LogContent "Attempting to Copy OS Upgrade Files from $source to $destination"
+            
             try {
-                Copy-Item -Path "$($Build.FullName)\OS" -Destination "$osUpgradePath" -Recurse -Force
+                #Copy-Item -Path "$($source)\OS" -Destination "$destination" -Recurse -Force
+                
+                $rcpyArguments = "`"$source`" `"$destination`" /MIR /Z /MT:$Global:rCpyThreads"
+                Add-LogContent "Copy Command: robocopy.exe $rcpyArguments"
+
+                Start-Process "robocopy.exe" -ArgumentList $rcpyArguments -Wait -NoNewWindow
                 Add-LogContent "Copy Completed Successfully"
             }
             catch {
                 $ErrorMessage = $_.Exception.Message
-                Add-LogContent "ERROR: Copying $($Build.FullName) to $osUpgradePath failed! Skipping import for $($Build.Name)"
+                Add-LogContent "ERROR: Copying $source to $destination failed! Skipping import for $name"
                 Add-LogContent "ERROR: $ErrorMessage"
             }
     }
