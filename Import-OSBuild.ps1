@@ -18,8 +18,8 @@ param (
 	 Filename:     	Import-OSBuild.ps1
 	===========================================================================
 	.DESCRIPTION
-        ## OSBuilder Import Tool
-        The purpose of this tool is to import OSBuilds and OSMedia created using David Segura's OSBuilder module into SCCM. It's primary functions are as follows:
+        ## OSDBuilder Import Tool
+        The purpose of this tool is to import OSBuilds and OSMedia created using David Segura's OSDBuilder module into SCCM. It's primary functions are as follows:
         1. Copy the OSBuild/OSMedia into the correct content shares (wim file and optionally OS Upgrade Packages)
         2. Import the OSBuild/OSMedia into SCCM Operating System Images (Optionally import OS Upgrade Package)
         3. Distribute Content to a specified Distribution Point Group
@@ -42,8 +42,8 @@ param (
 
 ## Global Variables
 
-# OSBuilder Variables
-$Global:OSBuildPath = "C:\OSBuilder"
+# OSDBuilder Variables
+$Global:OSBuildPath = "C:\OSDBuilder"
 
 # SCCM Variables
 $Global:ContentShare = "\\Path\to\Content\share"
@@ -52,7 +52,7 @@ $Global:SCCMSite = "SITE:"
 $Global:PreferredDistributionLoc = "PreferredGroupName" #Must be a distribution point group at this time
 
 # Logging Variables
-$Global:LogPath = "$PSScriptRoot\OSBuilder-Import.log"
+$Global:LogPath = "$PSScriptRoot\OSDBuilder-Import.log"
 $Global:MaxLogSize = 1000kb
 
 # Other Variables
@@ -81,7 +81,7 @@ function Add-LogContent {
 	}
 }
 
-function copy-OSBuilderObject {
+function copy-OSDBuilderObject {
     param (
         [ValidateSet('Image','UpgradePackage')][string]$Type,
         [string]$name,
@@ -122,7 +122,7 @@ function copy-OSBuilderObject {
     }
 }
 
-function import-OSBuilderObject {
+function import-OSDBuilderObject {
     param (
         [ValidateSet('Image','UpgradePackage')][string]$Type,
         [string]$Name,
@@ -218,28 +218,28 @@ if (-not (Get-Module ConfigurationManager)) {
     }
 }
 
-# Import OSBuilder Module Cmdlets
-if (-not (Get-Module OSBuilder)) {
+# Import OSDBuilder Module Cmdlets
+if (-not (Get-Module OSDBuilder)) {
     try {
-        Add-LogContent "Importing ConfigurationManager Module"
-        Import-Module OSBuilder
+        Add-LogContent "Importing OSDBuilder Module"
+        Import-Module OSDBuilder
     } 
     catch {
         $ErrorMessage = $_.Exception.Message
-		Add-LogContent "ERROR: Importing OSBuilder Module Failed! Exiting!"
+		Add-LogContent "ERROR: Importing OSDBuilder Module Failed! Exiting!"
         Add-LogContent "ERROR: $ErrorMessage"
         Exit
     }
 }
 
-# Check OSBuilder Version
-if ((Get-Module OSBuilder).Version -lt "19.1.11.0") { 
-    Write-Host "OSBuilder Version is out-of-date, please upgrade to the latest version"
-    Add-LogContent "OSBuilder Version is out-of-date, please upgrade to the latest version"
+# Check OSDBuilder Version
+if ((Get-Module OSDBuilder).Version -lt "19.3.12.0") { 
+    Write-Host "OSDBuilder Version is out-of-date, please upgrade to the latest version"
+    Add-LogContent "OSDBuilder Version is out-of-date, please upgrade to the latest version"
     Exit
 }
 
-# Search the OSBuilder Path for new Wim Files to import, loop if none are selected
+# Search the OSDBuilder Path for new Wim Files to import, loop if none are selected
 $selectedBuilds = $null
 while ([System.String]::IsNullOrEmpty($selectedBuilds)) {
     if ($ImportOSMedia){
@@ -267,7 +267,7 @@ ForEach ($Build in $SelectedBuilds){
     # Set Build Variables
     $BuildName = $Build.Name
     $BuildVersion = $Build.UBR
-    $BuildDescription = $Build.Imagename + " Version $BuildVersion - Imported from OSBuilder on: $(Get-Date -Format G)"
+    $BuildDescription = $Build.Imagename + " Version $BuildVersion - Imported from OSDBuilder on: $(Get-Date -Format G)"
     $wimLocation = Join-Path -Path $Build.FullName -ChildPath "OS\sources\install.wim"
     $OSLocation = Join-Path -Path $Build.FullName -ChildPath "OS"
 
@@ -309,10 +309,10 @@ ForEach ($Build in $SelectedBuilds){
         Add-LogContent "Pre-Check Complete - Import can continue"
         
         # Copy the selected install.wim to the ContentShare using the build name
-        copy-OSBuilderObject -Type Image -name $BuildName -source $wimLocation -destination $destinationPath
+        copy-OSDBuilderObject -Type Image -name $BuildName -source $wimLocation -destination $destinationPath
 
         # Import the newly Copied wim
-        import-OSBuilderObject -Type Image -Name $BuildName -Path $destinationPath -version $BuildVersion -Description $BuildDescription
+        import-OSDBuilderObject -Type Image -Name $BuildName -Path $destinationPath -version $BuildVersion -Description $BuildDescription
         
         # Distribute the new OSImage to the Specified Distribution Point Group
         Update-OSContent -Type Image -Name $BuildName
@@ -322,7 +322,7 @@ ForEach ($Build in $SelectedBuilds){
         Add-LogContent "Pre-Check Complete - Updating Existing OSUpgrade Item - Import can continue"
 
         # Copy the install.wim to the same location as the original
-        copy-OSBuilderObject -Type UpgradePackage -name $BuildName -source $OSLocation -destination $osUpgradePath
+        copy-OSDBuilderObject -Type UpgradePackage -name $BuildName -source $OSLocation -destination $osUpgradePath
 
         # Redistribute the Content
         Update-OSContent -Type UpgradePackage -Name $BuildName
@@ -342,10 +342,10 @@ ForEach ($Build in $SelectedBuilds){
             Add-LogContent "Pre-Check Complete - Creating New OSUpgrade Item - Import can continue"
 
             # Copy the Upgrade package to the Content Share
-            copy-OSBuilderObject -Type UpgradePackage -name $BuildName -source $OSLocation -destination $osUpgradePath
+            copy-OSDBuilderObject -Type UpgradePackage -name $BuildName -source $OSLocation -destination $osUpgradePath
 
             # Import the OS Upgrade Package
-            import-OSBuilderObject -Type UpgradePackage -Name $BuildName -Path $osUpgradePath -version $BuildVersion -Description $BuildDescription
+            import-OSDBuilderObject -Type UpgradePackage -Name $BuildName -Path $osUpgradePath -version $BuildVersion -Description $BuildDescription
 
             # Distribute the Content
             Start-Sleep 10 ## Should help with failed content distribution
@@ -357,7 +357,7 @@ ForEach ($Build in $SelectedBuilds){
 
             # Copy the Upgrade package to the Content Share
             $OSUpgradeName =$OSUpgradeSelection.Name
-            copy-OSBuilderObject -Type UpgradePackage -name $OSUpgradeName -source $OSLocation -destination $osUpgradePath
+            copy-OSDBuilderObject -Type UpgradePackage -name $OSUpgradeName -source $OSLocation -destination $osUpgradePath
 
             # Distribute the Content
             Start-Sleep 10 ## Should help with failed content distribution

@@ -1,12 +1,12 @@
 # OSBuilder-Import-Tool
 
-The purpose of this tool is to import OSBuilds and OSMedia created using David Segura's OSBuilder module into SCCM. It's primary functions are as follows:
+The purpose of this tool is to import OSBuilds and OSMedia created using David Segura's OSDBuilder module into SCCM. It's primary functions are as follows:
 1. Copy the OSBuild/OSMedia into the correct content shares (wim file and optionally OS Upgrade Packages)
 2. Import the OSBuild/OSMedia into SCCM Operating System Images (Optionally import OS Upgrade Package)
 3. Distribute Content to a specified Distribution Point Group
 
 ## Pre-Requisites
-Ensure that you have installed the OSBuilder Module at least version 19.1.11.0
+Ensure that you have installed the OSDBuilder Module at least version 19.1.11.0
 
 ## Instructions
 1. Edit the Import-OSBuild.ps1 file and set the following Global Variables: ContentShare, SCCMSite, PreferredDistributionLoc
