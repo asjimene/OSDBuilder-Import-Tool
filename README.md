@@ -11,7 +11,7 @@ Ensure that you have installed the OSDBuilder Module at least version 19.1.11.0
 ## Instructions
 1. Edit the Import-OSBuild.ps1 file and set the following Global Variables: ContentShare, SCCMSite, PreferredDistributionLoc
 2. Run the script and choose the OSBuilds you want to import
-3. The script will automatically move the install.wim to your specified content location, import the wim into SCCM, and distribute the content to the selected Distribution Point Group
+3. The script will automatically copy the install.wim to your specified content location, import the wim into SCCM, and distribute the content to the selected Distribution Point Group
 
 The Script will not copy wims that already exist on the content share
 
