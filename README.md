@@ -6,7 +6,9 @@ The purpose of this tool is to import OSBuilds and OSMedia created using David S
 3. Distribute Content to a specified Distribution Point Group
 
 ## Pre-Requisites
-Ensure that you have installed the OSDBuilder Module at least version 19.1.11.0
+Ensure that you have installed the OSDBuilder Module at least version 19.3.12.0 and the ConfigurationManger module
+This script needs to be run on the machine that OSDBuilder is run on
+The computer that this script is run on should also have the Configuration Manager Console installed
 
 ## Instructions
 1. Edit the Import-OSBuild.ps1 file and set the following Global Variables: ContentShare, SCCMSite, PreferredDistributionLoc
