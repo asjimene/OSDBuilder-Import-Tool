@@ -258,8 +258,10 @@ if ($UseExistingPackages){
     Set-Location $Global:SCCMSite
     $OSImageSelection = Get-CMOperatingSystemImage | Select-Object Name,ImageOSVersion,SourceDate,PkgSourcePath | Out-GridView -Title "Select the OS Image to Upgrade" -OutputMode Single
     $Global:ContentShare = $OSImageSelection.PkgSourcePath
-    $OSUpgradeSelection = Get-CMOperatingSystemInstaller | Select-Object Name,ImageOSVersion,SourceDate,PkgSourcePath | Out-Gridview -Title "Select the Upgrade Package to Update" -OutputMode Single
-    $Global:OSUpgradeContentShare = $OSUpgradeSelection.PkgSourcePath
+    if ($ImportOSUpgrade) {
+        $OSUpgradeSelection = Get-CMOperatingSystemInstaller | Select-Object Name,ImageOSVersion,SourceDate,PkgSourcePath | Out-Gridview -Title "Select the Upgrade Package to Update" -OutputMode Single
+        $Global:OSUpgradeContentShare = $OSUpgradeSelection.PkgSourcePath
+    }
     Pop-Location
 }
 
@@ -271,7 +273,7 @@ ForEach ($Build in $SelectedBuilds){
     $wimLocation = Join-Path -Path $Build.FullName -ChildPath "OS\sources\install.wim"
     $OSLocation = Join-Path -Path $Build.FullName -ChildPath "OS"
 
-    if ($Global:ContentShare -like "*.wim"){
+    if ($Global:ContentShare -like "*.wim") {
         Add-LogContent "Specified content location is a wim, will update existing wim, and use existing Upgrade Content Share"
         $updateExistingImage = $true
 
@@ -281,7 +283,8 @@ ForEach ($Build in $SelectedBuilds){
 
         # Backup the Existing image File (as long as it exists)
         try {
-            Move-Item -path "$destinationPath" -Destination $destinationPath.Replace(".wim","-$((Get-Date).ToString(`"yyyyMMdd`")).wim")
+            Add-LogContent "Backing up: $destinationPath to: $($destinationPath.Replace(".wim","-$((Get-Date).ToString(`"yyyyMMdd`")).wim"))"
+            Move-Item -path "$destinationPath" -Destination $destinationPath.Replace(".wim","-$((Get-Date).ToString(`"yyyyMMdd`")).wim") -ErrorAction Stop
             Add-LogContent "Backed up: $destinationPath to: $($destinationPath.Replace(".wim","-$((Get-Date).ToString(`"yyyyMMdd`")).wim"))"
         }
         catch {
@@ -291,14 +294,17 @@ ForEach ($Build in $SelectedBuilds){
         }
 
         # Backup the Existing Upgrade Content Path
-        try {
-            Move-Item -path "$OSUpgradePath" -Destination "$OSUpgradePath-$((Get-Date).ToString(`"yyyyMMdd`"))"
-            Add-LogContent "Backed Up $OSUpgradePath to: $OSUpgradePath-$((Get-Date).ToString(`"yyyyMMdd`"))"
-        }
-        catch {
-            $ErrorMessage = $_.Exception.Message
-            Add-LogContent "ERROR: Unable to backup $destinationPath"
-            Add-LogContent "ERROR: $ErrorMessage"
+        if ($ImportOSUpgrade) {
+            try {
+                Add-LogContent "Backing Up $OSUpgradePath to: $OSUpgradePath-$((Get-Date).ToString(`"yyyyMMdd`"))"
+                Move-Item -path "$OSUpgradePath" -Destination "$OSUpgradePath-$((Get-Date).ToString(`"yyyyMMdd`"))" -ErrorAction Stop
+                Add-LogContent "Backed Up $OSUpgradePath to: $OSUpgradePath-$((Get-Date).ToString(`"yyyyMMdd`"))"
+            }
+            catch {
+                $ErrorMessage = $_.Exception.Message
+                Add-LogContent "ERROR: Unable to backup $destinationPath"
+                Add-LogContent "ERROR: $ErrorMessage"
+            }
         }
     } else {
         $destinationPath = "$Global:ContentShare\$($Build.Name).wim"
