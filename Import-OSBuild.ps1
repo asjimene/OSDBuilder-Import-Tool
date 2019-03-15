@@ -311,6 +311,7 @@ ForEach ($Build in $SelectedBuilds){
         $osUpgradePath = "$Global:OSUpgradeContentShare\$($Build.Name)"
     }
 
+    # Upgrade and Import OS Item
     if ((Test-Path $wimLocation) -and (-not (Test-Path $destinationPath)) -and (-not $updateExistingImage)){
         Add-LogContent "Pre-Check Complete - Import can continue"
         
@@ -325,13 +326,13 @@ ForEach ($Build in $SelectedBuilds){
 
     }
     elseif ((Test-Path $OSLocation) -and $updateExistingImage) {
-        Add-LogContent "Pre-Check Complete - Updating Existing OSUpgrade Item - Import can continue"
+        Add-LogContent "Pre-Check Complete - Updating Existing OSImage Item - Import can continue"
 
         # Copy the install.wim to the same location as the original
-        copy-OSDBuilderObject -Type UpgradePackage -name $BuildName -source $OSLocation -destination $osUpgradePath
+        copy-OSDBuilderObject -Type Image -name $BuildName -source $wimLocation -destination $destinationPath
 
         # Redistribute the Content
-        Update-OSContent -Type UpgradePackage -Name $BuildName
+        Update-OSContent -Type Image -Name $BuildName
     } 
     else {
         if (-not (Test-Path $wimLocation)){
