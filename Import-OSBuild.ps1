@@ -1,15 +1,3 @@
-param (
-    # Also import the associated OSUpgrade package
-    [switch]
-    $ImportOSUpgrade = $false,
-    # Import OSMedia instead of OSBuild
-    [switch]
-    $ImportOSMedia = $false,
-    # Upgrade an existing Image and (optionally) Upgrade Package
-    [switch]
-    $UseExistingPackages = $false
-)
-
 <#	
 	.NOTES
 	===========================================================================
@@ -17,33 +5,60 @@ param (
 	 Author:		Andrew Jimenez (asjimene) - https://github.com/asjimene/
 	 Filename:     	Import-OSBuild.ps1
 	===========================================================================
-	.DESCRIPTION
+    .SYNOPSIS
+        Imports Image File Builds created using the OSDBuilder tool by David Segura (http://www.osdbuilder.com)
+
+    .DESCRIPTION
         ## OSDBuilder Import Tool
         The purpose of this tool is to import OSBuilds and OSMedia created using David Segura's OSDBuilder module into SCCM. It's primary functions are as follows:
         1. Copy the OSBuild/OSMedia into the correct content shares (wim file and optionally OS Upgrade Packages)
         2. Import the OSBuild/OSMedia into SCCM Operating System Images (Optionally import OS Upgrade Package)
         3. Distribute Content to a specified Distribution Point Group
 
-        # Import an OSBuild wim file only
-        `.\Import-OSBuild.ps1`
+        .EXAMPLE
+        .\Import-OSBuild.ps1
+        Imports an OSBuild wim file only
 
-        # Import an OSBuild wim file and the cooresponding OS Upgrade Package
-        `.\Import-OSBuild.ps1 -ImportOSUpgrade`
+        .EXAMPLE
+        .\Import-OSBuild.ps1 -ImportOSUpgrade
+        Import an OSBuild wim file and the cooresponding OS Upgrade Package
 
-        # Import an OSMedia wim file and the cooresponding OS Upgrade Package
-        `.\Import-OSBuild -Import-OSMedia -ImportOSUpgrade`
+        .EXAMPLE
+        .\Import-OSBuild.ps1 -OSUploadName "Windows 10 Enterprise x64 1809" -ImportOSUpgrade
+        Import the latest OSBuild with the name like "Windows 10 Enterprise x64 1809", and import the cooresponding OSUpgrade package. This flag is helpful for automating the upload process, say... after an OSBuild is completed.
 
-        # Import an OSBuild, but do not create a new wim on the content share, instead update an exising wim
-        `.\Import-OSBuild -UseExistingPackages`
+        .EXAMPLE
+        .\Import-OSBuild -Import-OSMedia -ImportOSUpgrade
+        Import an OSMedia wim file and the cooresponding OS Upgrade Package
 
-        # Import an OSBuild wim file, and the cooresponding OS Upgrade Package but use an exising wim and Upgrade Package
-        `.\Import-OSBuild -UseExistingPackages -ImportOSUpgrade`
+        .EXAMPLE
+        .\Import-OSBuild -UseExistingPackages
+        Import an OSBuild, but do not create a new wim on the content share, instead update an exising wim
+        NOTE: This flag cannot be used silently
+
+        .EXAMPLE
+        .\Import-OSBuild -UseExistingPackages -ImportOSUpgrade
+        Import an OSBuild wim file, and the cooresponding OS Upgrade Package but use an exising wim and Upgrade Package
+
 #>
 
-## Global Variables
+param (
+    # Also import the associated OSUpgrade package
+    [parameter()]
+    [switch]$ImportOSUpgrade = $false,
+    # Import OSMedia instead of OSBuild
+    [parameter()]
+    [switch]$ImportOSMedia = $false,
+    # Upgrade an existing Image and (optionally) Upgrade Package
+    [switch]
+    $UseExistingPackages = $false,
+    # Build/Media Name to upload (Uses '-like "*$OSUploadName*"' to choose the latest OSBuild or OSMedia with the provided name)
+    [string]
+    $OSUploadName
+)
 
-# OSDBuilder Variables
-$Global:OSBuildPath = "C:\OSDBuilder"
+
+## Global Variables
 
 # SCCM Variables
 $Global:ContentShare = "\\Path\to\Content\share"
@@ -233,21 +248,31 @@ if (-not (Get-Module OSDBuilder)) {
 }
 
 # Check OSDBuilder Version
-if ((Get-Module OSDBuilder).Version -lt "19.3.12.0") { 
+if ((Get-Module OSDBuilder).Version -lt "19.6.3.0") { 
     Write-Host "OSDBuilder Version is out-of-date, please upgrade to the latest version"
     Add-LogContent "OSDBuilder Version is out-of-date, please upgrade to the latest version"
     Exit
 }
 
-# Search the OSDBuilder Path for new Wim Files to import, loop if none are selected
+# Search the OSBuilder Path for new Wim Files to import, loop if none are selected
 $selectedBuilds = $null
 while ([System.String]::IsNullOrEmpty($selectedBuilds)) {
-    if ($ImportOSMedia){
-        $selectedBuilds = Get-OSMedia -GridView
+    if ($ImportOSMedia) {
+        if ([System.String]::IsNullOrEmpty($OSUploadName)) {
+            $selectedBuilds = Get-OSMedia -GridView
+        }
+        else {
+            $selectedBuilds = Get-OSMedia | Where-Object -Property Name -like "$OSUploadName*" | Sort-Object ModifiedTime | Select-Object -Last 1
+        }
         Add-LogContent "Selected the Following Media to import: $($SelectedBuilds.Name -join " ; ")"
     } 
     Else {
-        $selectedBuilds = Get-OSBuilds -GridView
+        if ([System.String]::IsNullOrEmpty($OSUploadName)) {
+            $selectedBuilds = Get-OSBuilds -GridView
+        }
+        else {
+            $selectedBuilds = Get-OSBuilds | Where-Object -Property Name -like "$OSUploadName*" | Sort-Object ModifiedTime | Select-Object -Last 1
+        }
         Add-LogContent "Selected the Following Builds to import: $($SelectedBuilds.Name -join " ; ")"
     }
 }
