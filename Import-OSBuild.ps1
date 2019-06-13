@@ -14,6 +14,7 @@
         1. Copy the OSBuild/OSMedia into the correct content shares (wim file and optionally OS Upgrade Packages)
         2. Import the OSBuild/OSMedia into SCCM Operating System Images (Optionally import OS Upgrade Package)
         3. Distribute Content to a specified Distribution Point Group
+        4. Optionally update a specified task sequence step with the new OS Image
 
         .EXAMPLE
         .\Import-OSBuild.ps1
@@ -26,6 +27,10 @@
         .EXAMPLE
         .\Import-OSBuild.ps1 -OSUploadName "Windows 10 Enterprise x64 1809" -ImportOSUpgrade
         Import the latest OSBuild with the name like "Windows 10 Enterprise x64 1809", and import the cooresponding OSUpgrade package. This flag is helpful for automating the upload process, say... after an OSBuild is completed.
+
+        .EXAMPLE
+        .\Import-OSBuild.ps1 -OSUploadMedia -OSUploadName "Windows 10 Enterprise x64 1809" -UpdateTS -TaskSequenceName "DEV Task Sequence" -TaskSequenceStepName "Install Windows 10 x64" 
+        Import the latest OSMedia with the name like "Windows 10 Enterprise x64 1809", then update the step "Install Windows 10 x64" in the task sequence "DEV Task Sequence" with the newly uploaded media
 
         .EXAMPLE
         .\Import-OSBuild -Import-OSMedia -ImportOSUpgrade
@@ -44,17 +49,32 @@
 
 param (
     # Also import the associated OSUpgrade package
-    [parameter()]
+    [Parameter(Mandatory = $false)]
     [switch]$ImportOSUpgrade = $false,
+
     # Import OSMedia instead of OSBuild
-    [parameter()]
+    [Parameter(Mandatory = $false)]
     [switch]$ImportOSMedia = $false,
+
     # Upgrade an existing Image and (optionally) Upgrade Package
-    [switch]
-    $UseExistingPackages = $false,
+    [Parameter(Mandatory = $false)]
+    [switch]$UseExistingPackages = $false,
+
     # Build/Media Name to upload (Uses '-like "*$OSUploadName*"' to choose the latest OSBuild or OSMedia with the provided name)
-    [string]
-    $OSUploadName
+    [Parameter(Mandatory = $false)]
+    [string]$OSUploadName,
+
+    # Update an Operating System image in a task sequence with the newly uploaded Operating System
+    [Parameter(ParameterSetName = 'TSUpdate', Mandatory = $false)]
+    [switch]$UpdateTS = $false,
+
+    # Specify the Name of the Task Sequence to Update (Requires UpdateTS switch)
+    [Parameter(ParameterSetName = 'TSUpdate', Mandatory = $true)]
+    [string]$TaskSequenceName,
+
+    # Specify the Name of the Operating System Step to Update (Requires UpdateTS switch)
+    [Parameter(ParameterSetName = 'TSUpdate', Mandatory = $true)]
+    [string]$TaskSequenceStepName
 )
 
 
@@ -404,6 +424,23 @@ ForEach ($Build in $SelectedBuilds){
             }
         }
     }
+}
+
+if ($UpdateTS) {
+    Push-Location
+    Set-Location $Global:SCCMSite
+    Add-LogContent "Waiting 60 Seconds before updating task sequence (This hopefully prevents some issues)"
+    Start-Sleep 60
+    Add-LogContent "Updating Task Sequence Step $TaskSequenceStepName on $TaskSequenceName with new package $BuildName" 
+    Add-LogContent "Set-CMTaskSequenceStepApplyOperatingSystem -ImagePackage (Get-CMOperatingSystemImage -Name `"$BuildName`") -ImagePackageIndex 1 -TaskSequenceName $TaskSequenceName -StepName $TaskSequenceStepName"
+    try {
+        Set-CMTaskSequenceStepApplyOperatingSystem -ImagePackage (Get-CMOperatingSystemImage -Name "$BuildName") -ImagePackageIndex 1 -TaskSequenceName $TaskSequenceName -StepName $TaskSequenceStepName -ErrorAction Stop
+    } catch {
+        $ErrorMessage = $_.Exception.Message
+        Add-LogContent "ERROR: Failed to Update Task Sequence"
+        Add-LogContent $ErrorMessage
+    }
+    Pop-Location
 }
 
 Add-LogContent "Import-OSBuild has Completed!"
