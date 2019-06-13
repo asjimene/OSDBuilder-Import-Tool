@@ -19,32 +19,32 @@ The computer that this script is run on should also have the Configuration Manag
 
 The Script will not copy wims (or import them into SCCM) if they already exist on the content share.
 
-###Imports an OSBuild wim file only
+### Imports an OSBuild wim file only
 .\Import-OSBuild.ps1
 
 
-###Import an OSBuild wim file and the cooresponding OS Upgrade Package
+### Import an OSBuild wim file and the cooresponding OS Upgrade Package
 .\Import-OSBuild.ps1 -ImportOSUpgrade
 
 
-###Import the latest OSBuild with the name like "Windows 10 Enterprise x64 1809", and import the cooresponding OSUpgrade package. This flag is helpful for automating the upload process, say... after an OSBuild is completed.
+### Import the latest OSBuild with the name like "Windows 10 Enterprise x64 1809", and import the cooresponding OSUpgrade package. This flag is helpful for automating the upload process, say... after an OSBuild is completed.
 .\Import-OSBuild.ps1 -OSUploadName "Windows 10 Enterprise x64 1809" -ImportOSUpgrade
 
 
-###Import the latest OSMedia with the name like "Windows 10 Enterprise x64 1809", then update the step "Install Windows 10 x64" in the task sequence "DEV Task Sequence" with the newly uploaded media
+### Import the latest OSMedia with the name like "Windows 10 Enterprise x64 1809", then update the step "Install Windows 10 x64" in the task sequence "DEV Task Sequence" with the newly uploaded media
 .\Import-OSBuild.ps1 -OSUploadMedia -OSUploadName "Windows 10 Enterprise x64 1809" -UpdateTS -TaskSequenceName "DEV Task Sequence" -TaskSequenceStepName "Install Windows 10 x64" 
 
 
-###Import an OSMedia wim file and the cooresponding OS Upgrade Package
+### Import an OSMedia wim file and the cooresponding OS Upgrade Package
 .\Import-OSBuild -Import-OSMedia -ImportOSUpgrade
 
 
-###Import an OSBuild, but do not create a new wim on the content share, instead update an exising wim
-###NOTE: This flag cannot be used silently
+### Import an OSBuild, but do not create a new wim on the content share, instead update an exising wim
+### NOTE: This flag cannot be used silently
 .\Import-OSBuild -UseExistingPackages
 
 
-###Import an OSBuild wim file, and the cooresponding OS Upgrade Package but use an exising wim and Upgrade Package
+### Import an OSBuild wim file, and the cooresponding OS Upgrade Package but use an exising wim and Upgrade Package
 .\Import-OSBuild -UseExistingPackages -ImportOSUpgrade
 
 
