@@ -1,10 +1,11 @@
 <#	
-	.NOTES
-	===========================================================================
-	 Created on:   	1/10/2019
-	 Author:		Andrew Jimenez (asjimene) - https://github.com/asjimene/
-	 Filename:     	Import-OSBuild.ps1
-	===========================================================================
+    .NOTES
+    ===========================================================================
+    Created on:    1/10/2019
+    Author:        Andrew Jimenez (asjimene) - https://github.com/asjimene/
+    Filename:       Import-OSBuild.ps1
+    Version:        2020.02.19
+    ===========================================================================
     .SYNOPSIS
         Imports Image File Builds created using the OSDBuilder tool by David Segura (http://www.osdbuilder.com)
 
@@ -276,7 +277,7 @@ if ((Get-Module OSDBuilder).Version -lt "19.6.3.0") {
     Exit
 }
 
-# Search the OSBuilder Path for new Wim Files to import, loop if none are selected
+# Search the OSDBuilder Path for new Wim Files to import, loop if none are selected
 $selectedBuilds = $null
 while ([System.String]::IsNullOrEmpty($selectedBuilds)) {
     if ($ImportOSMedia) {
