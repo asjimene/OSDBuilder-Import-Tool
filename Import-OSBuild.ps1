@@ -202,6 +202,7 @@ function Update-OSContent {
         try {
             if ($Type -eq "Image"){
                 Invoke-CMContentRedistribution -InputObject $(Get-CMOperatingSystemImage -Name "$Name") -DistributionPointGroupName $Global:PreferredDistributionLoc
+                (Get-CMOperatingSystemImage -Name "$Name").ExecuteMethod("ReloadImageProperties", $null)
                 Add-LogContent "Successfully Completed Copy, and Re-Distribution of OSBuild: $Name"
             }
             else {
@@ -219,6 +220,7 @@ function Update-OSContent {
         try {
             if ($Type -eq "Image"){
                 Start-CMContentDistribution -OperatingSystemImageName "$Name" -DistributionPointGroupName $Global:PreferredDistributionLoc
+                (Get-CMOperatingSystemImage -Name "$Name").ExecuteMethod("ReloadImageProperties", $null)
                 Add-LogContent "Successfully Completed Copy, Import, and Distribution of OSBuild: $Name"
             }
             else {
